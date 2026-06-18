@@ -1,0 +1,17 @@
+# Web server
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+
+# Google generative models (Gemini / Veo)
+google-genai>=0.3.0
+
+# Azure OpenAI (gpt-image-1)
+openai>=1.55
+
+# Config & secrets
+python-dotenv>=1.0
+pydantic>=2.5
+
+# Media fetching
+httpx>=0.27

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Greenhouse canvas</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+    <div id="topbar">
+        <strong>Greenhouse canvas</strong>
+        <span class="topbar-sep">·</span>
+        <span id="api-status" class="api-status" data-state="unknown" title="Checking API…">
+            <span class="dot"></span><span class="label">API: checking…</span>
+        </span>
+        <span class="topbar-hint">Drag to pan · Scroll to zoom</span>
+    </div>
+
+    <div id="canvas-container">
+        <div id="canvas">
+            <svg id="svg-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+    </div>
+
+    <div id="wire-banner" hidden></div>
+
+    <div id="toolbar" role="toolbar" aria-label="Add node">
+        <span class="toolbar-label">Add</span>
+
+        <span class="toolbar-combo">
+            <select id="data-variant" class="toolbar-select"
+                    aria-label="Data type" title="Pick data type to add">
+                <option value="text">Text</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+            </select>
+            <button type="button" class="tb-primary" data-add-node="data"
+                    title="Add a data node of the selected type">
+                <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
+                          stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+                Data
+            </button>
+        </span>
+
+        <span class="toolbar-combo">
+            <select id="generate-variant" class="toolbar-select"
+                    aria-label="Generate output type" title="Pick what to generate">
+                <option value="text">Text</option>
+                <option value="image" selected>Image</option>
+                <option value="video">Video</option>
+            </select>
+            <button type="button" class="tb-primary" data-add-node="generate"
+                    title="Add a generate node for the selected output">
+                <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
+                          stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+                Generate
+            </button>
+        </span>
+
+        <button type="button" class="tb-ghost" data-add-node="modify"
+                title="Transform / modify input">
+            <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
+                      stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            Modify
+        </button>
+
+        <span class="toolbar-divider"></span>
+
+        <button type="button" id="delete-node-btn" class="tb-ghost tb-danger"
+                title="Delete selected node (Del)" disabled>
+            <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M3 4.5h10M6.5 4.5V3.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75V4.5M5 4.5l.5 8.25a1 1 0 0 0 1 .94h3a1 1 0 0 0 1-.94L11 4.5"
+                      stroke="currentColor" stroke-width="1.4" fill="none"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Delete
+        </button>
+    </div>
+
+    <div id="session-bar" aria-label="Session shots"></div>
+
+    <aside id="sidebar" aria-hidden="true">
+        <header class="sidebar-header">
+            <span id="menu-node-title">Node Configuration</span>
+            <span class="close-btn" id="sidebar-close" role="button" aria-label="Close">✕</span>
+        </header>
+        <div class="sidebar-content" id="sidebar-fields"></div>
+    </aside>
+
+    <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

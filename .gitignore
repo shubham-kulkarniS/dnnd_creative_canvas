@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Secrets — NEVER commit
+.env
+.env.local
+*.key
+*.pem
+service-account*.json
+
+# Generated media
+generated/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
