@@ -1,0 +1,14 @@
+{
+    "name": "greenhouse-canvas-bundle",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Production bundle build script for the canvas SPA. The dev server happily serves the ES-module source tree directly; this only runs when you want a single, minified file for prod.",
+    "type": "module",
+    "scripts": {
+        "build": "node ./scripts/build.mjs",
+        "watch": "node ./scripts/build.mjs --watch"
+    },
+    "devDependencies": {
+        "esbuild": "^0.25.0"
+    }
+}

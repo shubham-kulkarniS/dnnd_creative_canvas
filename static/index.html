@@ -4,73 +4,228 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Greenhouse canvas</title>
+    <link rel="stylesheet" href="/static/css/tokens.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
+    <!-- Auth gate: lock the chrome immediately so the canvas never
+         flashes before the login modal can mount. JS removes this
+         class only after /api/auth/me confirms the user (or after
+         they explicitly choose to continue as a guest). -->
+    <script>document.documentElement.classList.add('auth-locked');</script>
 </head>
 <body>
-    <div id="topbar">
-        <strong>Greenhouse canvas</strong>
-        <span class="topbar-sep">·</span>
-        <span id="api-status" class="api-status" data-state="unknown" title="Checking API…">
-            <span class="dot"></span><span class="label">API: checking…</span>
+    <header id="topbar" role="banner">
+        <strong>Greenhouse</strong>
+        <span class="topbar-sep" aria-hidden="true">·</span>
+        <span id="api-status" class="api-status" data-state="unknown"
+              role="status" aria-live="polite" title="Checking API…">
+            <span class="dot" aria-hidden="true"></span><span class="label">API: checking…</span>
         </span>
         <span class="topbar-hint">Drag to pan · Scroll to zoom</span>
-    </div>
+    </header>
 
-    <div id="canvas-container">
+    <main id="canvas-container" role="main" aria-label="Node graph canvas">
         <div id="canvas">
-            <svg id="svg-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+            <svg id="svg-canvas" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
         </div>
-    </div>
+    </main>
 
-    <div id="wire-banner" hidden></div>
+    <!-- Collapsible left toolbar: Sessions + Assets library
+         DOM order is panel-then-rail so the rail sits at the right
+         side of the leftbar. When the leftbar slides left to collapse,
+         the panel goes off-screen but the rail stays at the viewport
+         edge. -->
+    <aside id="leftbar" class="collapsed" aria-label="Library">
+        <section class="lb-body">
+            <div class="lb-panel" id="lb-panel-user"
+                 role="tabpanel" data-lb-panel="user" hidden></div>
+            <div class="lb-panel" id="lb-panel-sessions"
+                 role="tabpanel" data-lb-panel="sessions"></div>
+            <div class="lb-panel" id="lb-panel-assets"
+                 role="tabpanel" data-lb-panel="assets" hidden></div>
+            <div class="lb-panel" id="lb-panel-notes"
+                 role="tabpanel" data-lb-panel="notes" hidden></div>
+            <div class="lb-panel" id="lb-panel-admin"
+                 role="tabpanel" data-lb-panel="admin" hidden></div>
+        </section>
+
+        <nav class="lb-tabs" role="tablist" aria-orientation="vertical">
+            <!-- User tab pinned at the top: identity affordances first. -->
+            <button type="button" class="lb-tab lb-tab--user" role="tab"
+                    data-lb-tab="user" aria-controls="lb-panel-user"
+                    title="Account">
+                <svg class="lb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <circle cx="8" cy="5.5" r="2.6" fill="none"
+                            stroke="currentColor" stroke-width="1.4"/>
+                    <path d="M2.5 13.5c.9-2.4 3.1-3.6 5.5-3.6s4.6 1.2 5.5 3.6"
+                          fill="none" stroke="currentColor" stroke-width="1.4"
+                          stroke-linecap="round"/>
+                </svg>
+                <span class="lb-tab-label">User</span>
+            </button>
+            <button type="button" class="lb-tab" role="tab"
+                    data-lb-tab="sessions" aria-controls="lb-panel-sessions"
+                    title="Sessions">
+                <svg class="lb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="2.5" y="3" width="11" height="10" rx="1.5"
+                          fill="none" stroke="currentColor" stroke-width="1.4"/>
+                    <path d="M5 6h6M5 8.5h6M5 11h4" stroke="currentColor"
+                          stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                <span class="lb-tab-label">Sessions</span>
+            </button>
+            <button type="button" class="lb-tab" role="tab"
+                    data-lb-tab="assets" aria-controls="lb-panel-assets"
+                    title="Assets">
+                <svg class="lb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="2.5" y="2.5" width="11" height="11" rx="1.5"
+                          fill="none" stroke="currentColor" stroke-width="1.4"/>
+                    <circle cx="6" cy="6.5" r="1.2" fill="currentColor"/>
+                    <path d="M2.7 11.5l3.3-3 2.5 2.5 1.7-1.5 3 2.5"
+                          stroke="currentColor" stroke-width="1.2" fill="none"
+                          stroke-linejoin="round"/>
+                </svg>
+                <span class="lb-tab-label">Assets</span>
+            </button>
+            <button type="button" class="lb-tab" role="tab"
+                    data-lb-tab="notes" aria-controls="lb-panel-notes"
+                    title="Director notes">
+                <svg class="lb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M3 3.75A.75.75 0 0 1 3.75 3h6.5a.75.75 0 0 1 .53.22l2 2
+                             c.14.14.22.33.22.53V12.25a.75.75 0 0 1-.75.75H3.75A.75.75 0 0 1 3 12.25V3.75z"
+                          fill="none" stroke="currentColor" stroke-width="1.3"
+                          stroke-linejoin="round"/>
+                    <path d="M5.5 6.5h5M5.5 8.75h5M5.5 11h3"
+                          stroke="currentColor" stroke-width="1.2"
+                          stroke-linecap="round"/>
+                </svg>
+                <span class="lb-tab-label">Notes</span>
+            </button>
+            <!-- Admin tab: hidden by Leftbar at runtime for non-admins. -->
+            <button type="button" class="lb-tab lb-tab--admin" role="tab"
+                    data-lb-tab="admin" aria-controls="lb-panel-admin"
+                    title="Admin dashboard" hidden>
+                <svg class="lb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 1.75l5.5 2.25v3.6c0 3.4-2.4 6.1-5.5 6.65
+                             c-3.1-.55-5.5-3.25-5.5-6.65V4L8 1.75z"
+                          fill="none" stroke="currentColor" stroke-width="1.4"
+                          stroke-linejoin="round"/>
+                    <path d="M6 8.25l1.6 1.6L10.5 6.6"
+                          fill="none" stroke="currentColor" stroke-width="1.3"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="lb-tab-label">Admin</span>
+            </button>
+            <button type="button" class="lb-collapse" id="lb-collapse"
+                    title="Collapse / expand library"
+                    aria-label="Toggle library panel">
+                <span class="lb-collapse-arrow" aria-hidden="true">‹</span>
+            </button>
+        </nav>
+    </aside>
+
+    <div id="wire-banner" role="status" aria-live="polite" hidden></div>
 
     <div id="toolbar" role="toolbar" aria-label="Add node">
         <span class="toolbar-label">Add</span>
 
-        <span class="toolbar-combo">
-            <select id="data-variant" class="toolbar-select"
-                    aria-label="Data type" title="Pick data type to add">
-                <option value="text">Text</option>
-                <option value="image">Image</option>
-                <option value="video">Video</option>
-            </select>
-            <button type="button" class="tb-primary" data-add-node="data"
-                    title="Add a data node of the selected type">
+        <!-- Three accent-coloured group pills: Text · Image · Video.
+             Each carries a small `+` chip that opens a popover listing
+             the three sub-actions belonging to that media kind. -->
+        <div class="tb-group tb-group--text" data-group="text">
+            <span class="tb-group-label">Text</span>
+            <button type="button" class="tb-group-add" data-group-add="text"
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="tb-menu-text"
+                    title="Add a Text node">
                 <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
-                          stroke-width="1.6" stroke-linecap="round"/>
+                          stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
-                Data
             </button>
-        </span>
+            <div class="tb-menu" id="tb-menu-text"
+                 data-group-menu="text" role="menu" hidden>
+                <button type="button" role="menuitem" data-add="text:input">
+                    <span class="tb-menu-name">Input</span>
+                    <span class="tb-menu-hint">Typed or pasted text</span>
+                </button>
+                <button type="button" role="menuitem" data-add="text:enhance">
+                    <span class="tb-menu-name">Enhance</span>
+                    <span class="tb-menu-hint">Refine an existing prompt</span>
+                </button>
+                <button type="button" role="menuitem" data-add="text:caption">
+                    <span class="tb-menu-name">Caption</span>
+                    <span class="tb-menu-hint">Image / video → text</span>
+                </button>
+            </div>
+        </div>
 
-        <span class="toolbar-combo">
-            <select id="generate-variant" class="toolbar-select"
-                    aria-label="Generate output type" title="Pick what to generate">
-                <option value="text">Text</option>
-                <option value="image" selected>Image</option>
-                <option value="video">Video</option>
-            </select>
-            <button type="button" class="tb-primary" data-add-node="generate"
-                    title="Add a generate node for the selected output">
+        <div class="tb-group tb-group--image" data-group="image">
+            <span class="tb-group-label">Image</span>
+            <button type="button" class="tb-group-add" data-group-add="image"
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="tb-menu-image"
+                    title="Add an Image node">
                 <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
-                          stroke-width="1.6" stroke-linecap="round"/>
+                          stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
-                Generate
             </button>
-        </span>
+            <div class="tb-menu" id="tb-menu-image"
+                 data-group-menu="image" role="menu" hidden>
+                <button type="button" role="menuitem" data-add="image:data">
+                    <span class="tb-menu-name">Data</span>
+                    <span class="tb-menu-hint">Upload or reference an image</span>
+                </button>
+                <button type="button" role="menuitem" data-add="image:generate">
+                    <span class="tb-menu-name">Generate</span>
+                    <span class="tb-menu-hint">Prompt → image</span>
+                </button>
+                <button type="button" role="menuitem" data-add="image:modify">
+                    <span class="tb-menu-name">Modify</span>
+                    <span class="tb-menu-hint">Transform an existing image</span>
+                </button>
+            </div>
+        </div>
 
-        <button type="button" class="tb-ghost" data-add-node="modify"
-                title="Transform / modify input">
-            <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
-                      stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-            Modify
-        </button>
+        <div class="tb-group tb-group--video" data-group="video">
+            <span class="tb-group-label">Video</span>
+            <button type="button" class="tb-group-add" data-group-add="video"
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="tb-menu-video"
+                    title="Add a Video node">
+                <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
+                          stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <div class="tb-menu" id="tb-menu-video"
+                 data-group-menu="video" role="menu" hidden>
+                <button type="button" role="menuitem" data-add="video:data">
+                    <span class="tb-menu-name">Data</span>
+                    <span class="tb-menu-hint">Upload or reference a clip</span>
+                </button>
+                <button type="button" role="menuitem" data-add="video:generate">
+                    <span class="tb-menu-name">Generate</span>
+                    <span class="tb-menu-hint">Prompt → video</span>
+                </button>
+                <button type="button" role="menuitem" data-add="video:modify">
+                    <span class="tb-menu-name">Modify</span>
+                    <span class="tb-menu-hint">Transform an existing clip</span>
+                </button>
+            </div>
+        </div>
 
         <span class="toolbar-divider"></span>
+
+        <button type="button" id="run-pipeline-btn" class="tb-ghost tb-primary-ghost"
+                title="Execute pipeline (⌘⏎ / Ctrl+Enter)">
+            <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M4 3.5l8 4.5-8 4.5v-9z"
+                      stroke="currentColor" stroke-width="1.4" fill="none"
+                      stroke-linejoin="round"/>
+            </svg>
+            Execute
+        </button>
 
         <button type="button" id="delete-node-btn" class="tb-ghost tb-danger"
                 title="Delete selected node (Del)" disabled>
@@ -83,15 +238,21 @@
         </button>
     </div>
 
-    <div id="session-bar" aria-label="Session shots"></div>
+    <div id="session-bar" aria-label="Session shots" role="region"></div>
 
-    <aside id="sidebar" aria-hidden="true">
+    <aside id="sidebar" aria-hidden="true" aria-label="Node configuration">
         <header class="sidebar-header">
             <span id="menu-node-title">Node Configuration</span>
-            <span class="close-btn" id="sidebar-close" role="button" aria-label="Close">✕</span>
+            <button type="button" class="close-btn" id="sidebar-close"
+                    aria-label="Close panel" title="Close (Esc)">✕</button>
         </header>
         <div class="sidebar-content" id="sidebar-fields"></div>
     </aside>
+
+    <!-- Auth modal mount. AuthModal renders into this container and
+         toggles `hidden` to open/close. Placed last so it overlays
+         everything when visible. -->
+    <div id="auth-modal" hidden></div>
 
     <script type="module" src="/static/js/main.js"></script>
 </body>

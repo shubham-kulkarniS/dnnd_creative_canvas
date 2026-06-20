@@ -9,11 +9,11 @@
  */
 
 import { store } from './state.js';
+import { toast, hide as hideToast } from './ui/toast.js';
 
 export class Wiring {
-    constructor(canvas, banner) {
+    constructor(canvas /* banner kept for back-compat with main.js, but unused */) {
         this.canvas = canvas;
-        this.banner = banner;
         this._first = null;            // slotId we picked first
         this._firstKind = null;        // 'out' | 'in'
 
@@ -50,8 +50,11 @@ export class Wiring {
         const from = kind === 'out' ? id : this._first;
         const to   = kind === 'in'  ? id : this._first;
         const ok = store.addConnection(from, to);
-        this._showBanner(ok ? '✔ Connected' : '✗ Could not connect (already exists, or same node)', !ok);
-        this._cancel();
+        this._showBanner(
+            ok ? 'Connected' : 'Could not connect (already exists, or same node)',
+            !ok,
+        );
+        this._cancel({ keepBanner: true });
         if (ok) setTimeout(() => this._hideBanner(), 1200);
     };
 
@@ -62,11 +65,11 @@ export class Wiring {
         }
     };
 
-    _cancel() {
+    _cancel({ keepBanner = false } = {}) {
         this._first = null;
         this._firstKind = null;
         this._clearCompatible();
-        this._hideBanner();
+        if (!keepBanner) this._hideBanner();
     }
 
     _showCompatible() {
@@ -91,9 +94,7 @@ export class Wiring {
     }
 
     _showBanner(text, isError = false) {
-        this.banner.textContent = text;
-        this.banner.dataset.kind = isError ? 'err' : 'info';
-        this.banner.hidden = false;
+        toast(text, { kind: isError ? 'err' : 'info' });
     }
-    _hideBanner() { this.banner.hidden = true; }
+    _hideBanner() { hideToast(); }
 }

@@ -10,9 +10,16 @@
  * Modify is unchanged: image upstream + optional text → image edit.
  */
 
-import { store } from './state.js';
-import { api } from './api.js';
+import { store }   from './state.js';
+import { api }     from './api.js';
 import { session } from './session.js';
+import { gradio }  from './gradio.js';
+
+/** Announce run lifecycle so the canvas can show a per-node indicator.
+ *  Kinds: 'start' | 'ok' | 'err'. */
+function emitRunStatus(nodeId, kind, detail) {
+    store.emit('node:run-status', { id: nodeId, kind, detail });
+}
 
 /** Strip keys whose value is `null`, `undefined`, or empty string so
  *  the backend uses model defaults rather than overriding with blanks. */
@@ -76,28 +83,41 @@ function findInput(nodes, dataTypes) {
     return nodes.find(n => n.type === 'data' && dataTypes.includes(n.dataType));
 }
 
-/** Push `value` into every downstream Data node of matching dataType
- *  whose source is "input" (i.e. it's expecting upstream feed).
- *  If none exist, auto-spawn a fresh output Data node beside the
- *  producer and wire it so the result is visible. The producer
- *  remains selected so its Run-status pill stays in view. */
+/** Push `value` into a downstream Data node of matching `dataTypes`
+ *  whose source is "input" AND which is still empty (no prior output).
+ *  This means:
+ *    - The first empty matching sink receives the new value.
+ *    - Filled sinks are NEVER silently overwritten — they preserve the
+ *      result of an earlier run.
+ *    - If no empty matching sink exists (none connected, or all are
+ *      already populated), a fresh sink is spawned beside the producer
+ *      and wired up so the result is visible.
+ *  The producer stays selected so its Run-status pill stays in view. */
 function pushDownstream(producer, dataTypes, value) {
-    const matches = downstreamDataNodes(producer.id)
-        .filter(dn => dn.source === 'input' && dataTypes.includes(dn.dataType));
+    const downstream = downstreamDataNodes(producer.id);
+    const emptyMatches = downstream.filter(dn =>
+        dn.source === 'input'
+        && dataTypes.includes(dn.dataType)
+        && !dn.value
+    );
 
-    if (matches.length > 0) {
-        for (const dn of matches) {
-            store.updateNode(dn.id, 'value', value);
-        }
+    if (emptyMatches.length > 0) {
+        // Fill the first empty sink; leave any others alone so a later
+        // re-run can populate them in order.
+        store.updateNode(emptyMatches[0].id, 'value', value);
         return;
     }
 
-    // No compatible sink — create one. Stagger vertically per existing
-    // downstream node so successive runs don't pile up on top of each
-    // other.
+    // No empty compatible sink — spawn one. Stagger vertically per
+    // existing downstream node so successive runs don't pile up on top
+    // of each other.
     const dataType = dataTypes[0];
     const title    = `${dataType[0].toUpperCase()}${dataType.slice(1)} output`;
-    const offset   = downstreamDataNodes(producer.id).length;
+    const offset   = downstream.length;
+    // Sink offset = producer right edge + a 120 px gap so wires aren't
+    // squashed. Reads producer.width so wider nodes still get clear air
+    // around their downstream sinks.
+    const producerWidth = producer.width || 220;
     const sink = store.addNode({
         id: store.nextNodeId(),
         type: 'data',
@@ -107,7 +127,7 @@ function pushDownstream(producer, dataTypes, value) {
         value,
         inputs: ['in_1'],
         outputs: ['out_1'],
-        x: producer.x + 340,
+        x: producer.x + producerWidth + 120,
         y: producer.y + offset * 220,
     });
 
@@ -128,7 +148,40 @@ export async function runNode(nodeId) {
     const node = store.getNode(nodeId);
     if (!node) throw new Error(`unknown node ${nodeId}`);
 
+    emitRunStatus(nodeId, 'start');
+    try {
+        const result = await _runNodeInner(node);
+        emitRunStatus(nodeId, 'ok', { result });
+        return result;
+    } catch (err) {
+        emitRunStatus(nodeId, 'err', { message: err?.message || String(err) });
+        throw err;
+    }
+}
+
+async function _runNodeInner(node) {
+    const nodeId = node.id;
     const upstream = upstreamNodes(nodeId);
+
+    // ── Gradio dispatch path ──────────────────────────────────────
+    // Nodes carrying ``engine: 'gradio'`` route through the centralised
+    // GradioManager instead of the in-process FastAPI proxy. We delegate
+    // input-validation + URL pointer wiring to the manager so this code
+    // stays small. The result is pushed downstream identically to the
+    // FastAPI path so the rest of the app sees no difference.
+    if (node.engine === 'gradio') {
+        const { value, dataType } = await gradio.execute(node, upstream);
+        pushDownstream(node, [dataType], value);
+        session.record({
+            // ``text`` outputs go in as captions; binary outputs as their type.
+            type: dataType === 'text' ? 'caption' : dataType,
+            url:  dataType === 'text' ? null     : value,
+            text: dataType === 'text' ? value    : null,
+            producerNodeId: node.id,
+        });
+        return value;
+    }
+
     const text  = findInput(upstream, ['text']);
     const image = findInput(upstream, ['image']);
     const video = findInput(upstream, ['video']);

@@ -49,6 +49,31 @@ class Settings:
     # Storage
     media_dir: Path
 
+    # ── Auth ─────────────────────────────────────────────────────────
+    # Where the users table lives. SQLite by default — swap for a real
+    # DB URL (e.g. postgresql+psycopg://…) in production.
+    auth_db_url: str
+    # HMAC key for signing JWTs. NEVER hard-code in source — required
+    # via env. A fresh random value invalidates every existing token.
+    jwt_secret: str
+    jwt_algorithm: str
+    # Short-lived access token (limits damage from token theft) +
+    # longer-lived refresh token (kept on a tighter cookie path).
+    access_token_ttl_minutes: int
+    refresh_token_ttl_days: int
+    # Cookie flags. Secure=True requires HTTPS — set to False in local
+    # dev only (over plain HTTP). SameSite=strict blocks CSRF from
+    # cross-site contexts.
+    auth_cookie_secure: bool
+    auth_cookie_samesite: str  # "strict" | "lax" | "none"
+    auth_cookie_domain: str | None
+
+    # ── Runtime ──────────────────────────────────────────────────────
+    # "dev" disables HTTP caching for /static so JS/CSS edits show up
+    # without a hard refresh. "prod" lets the browser cache static
+    # assets and uses ETag/304 for revalidation.
+    env: str  # "dev" | "prod"
+
     def assert_configured(self) -> None:
         """Raise if no usable Google credential is present."""
         if self.use_vertex:
@@ -68,6 +93,16 @@ class Settings:
             raise RuntimeError(
                 "Azure OpenAI is not configured. Set AZURE_OPENAI_API_KEY and "
                 "AZURE_OPENAI_ENDPOINT (and optionally AZURE_OPENAI_IMAGE_DEPLOYMENT)."
+            )
+
+    def assert_auth_configured(self) -> None:
+        """Raise if auth secrets are missing — prevents booting an
+        insecure server with the (random) fallback JWT secret."""
+        if not self.jwt_secret or len(self.jwt_secret) < 32:
+            raise RuntimeError(
+                "AUTH_JWT_SECRET must be set to a value of at least 32 "
+                "characters. Generate one with `python -c \"import secrets; "
+                "print(secrets.token_urlsafe(48))\"`."
             )
 
 
@@ -96,4 +131,22 @@ def get_settings() -> Settings:
             "AZURE_OPENAI_API_VERSION", "2025-04-01-preview"
         ),
         media_dir=media_dir,
+        # Auth — see Settings for documentation on each field.
+        auth_db_url=os.environ.get(
+            "AUTH_DB_URL", f"sqlite:///{(Path('./data/auth.db')).resolve()}"
+        ),
+        jwt_secret=os.environ.get("AUTH_JWT_SECRET", ""),
+        jwt_algorithm=os.environ.get("AUTH_JWT_ALGORITHM", "HS256"),
+        access_token_ttl_minutes=int(
+            os.environ.get("AUTH_ACCESS_TTL_MINUTES", "15")
+        ),
+        refresh_token_ttl_days=int(
+            os.environ.get("AUTH_REFRESH_TTL_DAYS", "7")
+        ),
+        auth_cookie_secure=_bool(os.environ.get("AUTH_COOKIE_SECURE", "1")),
+        auth_cookie_samesite=os.environ.get("AUTH_COOKIE_SAMESITE", "strict").lower(),
+        auth_cookie_domain=os.environ.get("AUTH_COOKIE_DOMAIN") or None,
+        env=(os.environ.get("APP_ENV", "dev").strip().lower()
+             if os.environ.get("APP_ENV", "dev").strip().lower() in {"dev", "prod"}
+             else "dev"),
     )

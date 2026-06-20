@@ -17,17 +17,55 @@ export class ConnectionRenderer {
         this.svg = svg;
         this.paths = new Map(); // "from→to" -> <path>
         this._rafPending = false;
+        // Cache slot-element offsets relative to the node root. Layout
+        // is the same for the same slot DOM element until the node's
+        // body or width changes; recomputing during pan/zoom dragged
+        // every render through ``offsetLeft`` * 60fps which churned a
+        // surprising amount of layout. Stored on a WeakMap so removed
+        // slot elements GC naturally.
+        this._slotOffsets = new WeakMap();   // slotEl -> {sx, sy}
 
         this._syncPathsFromStore();
         this.render();
 
         store.on('view:changed',        this.scheduleRender);
         store.on('node:moved',          this.scheduleRender);
+        // Width and body re-renders move slot offsets relative to the
+        // node root; everything else (drag, zoom, pan) does not.
+        store.on('node:updated',        this._onNodeUpdated);
+        store.on('node:added',          this._invalidateSlotCache);
         // Topology events update path DOM incrementally.
         store.on('node:removed',        this._onNodeRemoved);
         store.on('connection:added',    this._onConnectionAdded);
         store.on('connection:removed',  this._onConnectionRemoved);
+        // Batch mode: skip render scheduling while a session is being
+        // restored, then do exactly one render once the new graph is
+        // fully in place. Saves N rAF callbacks per session-load.
+        store.on('batch:end',           this._onBatchEnd);
     }
+
+    _onBatchEnd = () => {
+        this._invalidateSlotCache();
+        // Bypass the rAF guard so the user sees wires at the first
+        // paint after the new graph appears.
+        this._rafPending = false;
+        this.render();
+    };
+
+    _invalidateSlotCache = () => {
+        // Cheap reset — at most a few dozen entries. We don't bother
+        // surgically removing single nodes because the cache is keyed
+        // by element reference and the cost of re-measuring is trivial
+        // off the hot path.
+        this._slotOffsets = new WeakMap();
+    };
+
+    _onNodeUpdated = ({ key }) => {
+        // Only width changes can move slots relative to the node root.
+        // Title / value / params changes never re-layout the slots
+        // (which live in ``.slots-container``, not ``.node-body``).
+        if (key === 'width') this._invalidateSlotCache();
+    };
 
     _onConnectionAdded = ({ from, to }) => {
         this._ensurePath(`${from}→${to}`);
@@ -58,8 +96,7 @@ export class ConnectionRenderer {
     _ensurePath(key) {
         if (this.paths.has(key)) return;
         const path = document.createElementNS(SVG_NS, 'path');
-        path.setAttribute('stroke', '#007acc');
-        path.setAttribute('stroke-width', '3');
+        path.setAttribute('class', 'wire');
         path.setAttribute('fill', 'none');
         this.svg.appendChild(path);
         this.paths.set(key, path);
@@ -88,6 +125,10 @@ export class ConnectionRenderer {
     }
 
     scheduleRender = () => {
+        // During a batch (session-restore) skip individual schedules;
+        // ``_onBatchEnd`` will run a single render once everything is
+        // in place. Avoids N wasted rAF callbacks per session load.
+        if (store.isBatching) return;
         if (this._rafPending) return;
         this._rafPending = true;
         requestAnimationFrame(() => {
@@ -120,6 +161,10 @@ export class ConnectionRenderer {
      * Necessary because the slot sits inside `.slots-container`
      * (`position: relative`), so `slot.offsetLeft/Top` alone would be
      * relative to that wrapper, not to the node.
+     *
+     * Offsets are cached on a WeakMap keyed by the slot element so
+     * pan/zoom/drag at 60 fps doesn't repeatedly read layout for
+     * coordinates that have not changed.
      */
     _slotPoint(slotId) {
         const el = document.getElementById(slotId);
@@ -129,13 +174,18 @@ export class ConnectionRenderer {
         const node = store.getNode(nodeEl.id);
         if (!node) return null;
 
-        let sx = el.offsetWidth  / 2;
-        let sy = el.offsetHeight / 2;
-        for (let cur = el; cur && cur !== nodeEl; cur = cur.offsetParent) {
-            sx += cur.offsetLeft;
-            sy += cur.offsetTop;
+        let off = this._slotOffsets.get(el);
+        if (!off) {
+            let sx = el.offsetWidth  / 2;
+            let sy = el.offsetHeight / 2;
+            for (let cur = el; cur && cur !== nodeEl; cur = cur.offsetParent) {
+                sx += cur.offsetLeft;
+                sy += cur.offsetTop;
+            }
+            off = { sx, sy };
+            this._slotOffsets.set(el, off);
         }
-        return { x: node.x + sx, y: node.y + sy };
+        return { x: node.x + off.sx, y: node.y + off.sy };
     }
 }
 

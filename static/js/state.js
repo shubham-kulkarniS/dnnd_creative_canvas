@@ -17,6 +17,9 @@ class Store {
         this.view = { panX: 50, panY: 50, zoom: 1.0 };
         this.activeNodeId = null;
         this._subs = new Map();
+        // Set true while ``replaceGraph`` is running so observers can
+        // skip per-event work in favour of a single ``batch:end``.
+        this.isBatching = false;
 
         // Build traversal indexes once; maintained incrementally afterwards.
         this._rebuildAdjacency();
@@ -139,20 +142,35 @@ class Store {
         return true;
     }
 
-    /** Replace the entire graph atomically. Used by session restore. */
+    /** Replace the entire graph atomically. Used by session restore.
+     *
+     *  Wrapped in ``batch:start`` / ``batch:end`` events so observers
+     *  can defer expensive work (a full ConnectionRenderer render, a
+     *  Sidebar re-render, etc.) until the new graph is fully in place
+     *  instead of re-rendering N times during the rebuild. While
+     *  ``isBatching`` is true, fine-grained events still fire \u2014 they
+     *  just carry a hint that more changes are coming.
+     */
     replaceGraph({ nodes, connections }) {
-        // Tear down through mutation methods so observers can clear old DOM.
-        for (const id of Array.from(this.nodes.keys())) this.removeNode(id);
+        this.isBatching = true;
+        this.emit('batch:start');
+        try {
+            // Tear down through mutation methods so observers can clear old DOM.
+            for (const id of Array.from(this.nodes.keys())) this.removeNode(id);
 
-        // Re-create nodes (deep-clone so callers can keep their snapshot).
-        for (const n of nodes) this.addNode(JSON.parse(JSON.stringify(n)));
+            // Re-create nodes (deep-clone so callers can keep their snapshot).
+            for (const n of nodes) this.addNode(JSON.parse(JSON.stringify(n)));
 
-        // Re-wire — snapshot is assumed valid, so bypass validation.
-        for (const c of connections) {
-            const conn = { from: c.from, to: c.to };
-            this.connections.push(conn);
-            this._linkAdj(conn);
-            this.emit('connection:added', { from: c.from, to: c.to });
+            // Re-wire — snapshot is assumed valid, so bypass validation.
+            for (const c of connections) {
+                const conn = { from: c.from, to: c.to };
+                this.connections.push(conn);
+                this._linkAdj(conn);
+                this.emit('connection:added', { from: c.from, to: c.to });
+            }
+        } finally {
+            this.isBatching = false;
+            this.emit('batch:end');
         }
     }
 

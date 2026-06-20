@@ -4,8 +4,10 @@
  * in a new tab. Each tile also shows a tiny × to delete that shot.
  */
 
-import { store } from './state.js';
-import { session } from './session.js';
+import { store }          from './state.js';
+import { session }        from './session.js';
+import { esc }            from './ui/dom.js';
+import { confirmDialog }  from './ui/dialog.js';
 
 export class SessionBar {
     constructor(root) {
@@ -68,7 +70,7 @@ export class SessionBar {
         this.shotsEl.innerHTML = html;
     }
 
-    _onClick = (e) => {
+    _onClick = async (e) => {
         const rm = e.target.closest('[data-remove]');
         if (rm) {
             e.stopPropagation();
@@ -80,14 +82,18 @@ export class SessionBar {
             e.stopPropagation();
             const s = session.shots.find(x => x.id === restore.dataset.restore);
             if (!s || !s.graph) return;
-            if (!confirm('Replace the current canvas with this shot’s graph?')) return;
+            const ok = await confirmDialog(
+                'Replace the current canvas with this shot’s graph?',
+                { confirmLabel: 'Replace' });
+            if (!ok) return;
             store.replaceGraph(s.graph);
             return;
         }
         if (e.target.closest('[data-clear]')) {
-            if (session.shots.length && confirm('Clear all shots in this session?')) {
-                session.clear();
-            }
+            if (!session.shots.length) return;
+            const ok = await confirmDialog('Clear all shots in this session?',
+                { kind: 'danger', confirmLabel: 'Clear' });
+            if (ok) session.clear();
             return;
         }
         if (e.target.closest('[data-export]')) {
@@ -117,6 +123,3 @@ export class SessionBar {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 }
-
-const ESC = document.createElement('div');
-function esc(s) { ESC.textContent = String(s ?? ''); return ESC.innerHTML; }

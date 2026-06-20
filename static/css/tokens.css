@@ -1,0 +1,171 @@
+/**
+ * Greenhouse Canvas — design tokens.
+ *
+ * Single source of truth for surfaces, borders, text, brand, spacing,
+ * radii, typography, elevation and motion. Loaded BEFORE style.css.
+ *
+ * Aesthetic: Studio Dark (Figma / DaVinci Resolve register).
+ * Accent: macOS system blue (#0a84ff) — same family already used by the
+ * vibrancy-styled toolbar, promoted here so every surface inherits it.
+ *
+ * Legacy aliases (--bg-color, --node-bg, --accent-color, etc.) are
+ * kept alive at the bottom so in-flight rules and any inline JS that
+ * references them continue to compile.
+ */
+
+:root {
+  /* ─── Surfaces (dark, neutral, low chroma) ─── */
+  --surface-0:        #0e0f11;          /* canvas background */
+  --surface-1:        #16181b;          /* panels (sidebar, leftbar body) */
+  --surface-2:        #1e2125;          /* nodes, cards, list items */
+  --surface-3:        #272a2f;          /* inputs, raised chips */
+  --surface-4:        #34383e;          /* hover on raised */
+  --surface-overlay:  rgba(40, 40, 42, 0.72);   /* topbar / toolbar vibrancy */
+  --grid-dot:         #22252a;          /* canvas dotted grid */
+
+  /* ─── Borders ─── */
+  --border-subtle:    rgba(255, 255, 255, 0.06);
+  --border:           rgba(255, 255, 255, 0.10);
+  --border-strong:    rgba(255, 255, 255, 0.16);
+
+  /* ─── Text ─── */
+  --text:             #f0f1f3;
+  --text-secondary:   #c2c5cb;
+  --text-muted:       #9aa0a6;          /* ≥4.5:1 on --surface-1 */
+  --text-faint:       #6c7178;
+
+  /* ─── Brand & semantic ─── */
+  --accent:           #0a84ff;          /* macOS system blue (dark) */
+  --accent-hover:     #2a94ff;
+  --accent-soft:      rgba(10, 132, 255, 0.35);   /* focus ring */
+  --accent-ghost:     rgba(10, 132, 255, 0.12);   /* hover tints */
+  --accent-strong:    rgba(10, 132, 255, 0.55);   /* loud animation edges */
+
+  --success:          #30d158;
+  --success-soft:     rgba(48, 209, 88, 0.18);
+  --success-edge:     rgba(48, 209, 88, 0.35);    /* 1px outline strength */
+  --success-strong:   rgba(48, 209, 88, 0.55);
+  --warning:          #ffd60a;
+  --warning-soft:     rgba(255, 214, 10, 0.18);
+  --danger:           #ff453a;
+  --danger-hover:     #ff6b62;                    /* lighter on hover */
+  --danger-soft:      rgba(255, 69, 58, 0.18);
+  --danger-edge:      rgba(255, 69, 58, 0.35);
+  --danger-strong:    rgba(255, 69, 58, 0.55);
+
+  /* Info — informational tint distinct from the accent blue. Used by
+     anything that says "data flowing in here" or "FYI", reserving
+     yellow strictly for "caution / pending". */
+  --info:             #64d2ff;                    /* cyan */
+  --info-soft:        rgba(100, 210, 255, 0.18);
+  --info-ghost:       rgba(100, 210, 255, 0.10);
+
+  /* ─── Spacing scale (4px base) ─── */
+  --space-1:          4px;
+  --space-2:          8px;
+  --space-3:          12px;
+  --space-4:          16px;
+  --space-5:          20px;
+  --space-6:          24px;
+  --space-7:          32px;
+  --space-8:          48px;
+
+  /* ─── Radii ─── */
+  --radius-xs:        3px;
+  --radius-sm:        6px;
+  --radius-md:        8px;
+  --radius-lg:        12px;
+  --radius-pill:      999px;
+
+  /* ─── Typography ─── */
+  --font-sans:        -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                      "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono:        ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs:          11px;
+  --text-sm:          12px;
+  --text-base:        13px;
+  --text-md:          14px;
+  --text-lg:          16px;
+
+  --leading-tight:    1.2;
+  --leading-normal:   1.45;
+
+  --tracking-caps:    0.06em;
+
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+
+  /* ─── Elevation ─── */
+  --shadow-1:
+      0 1px 2px rgba(0, 0, 0, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-2:
+      0 4px 12px rgba(0, 0, 0, 0.45),
+      0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-3:
+      0 10px 28px rgba(0, 0, 0, 0.50),
+      0 2px 6px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  /* ─── Motion ─── */
+  --ease-out:         cubic-bezier(0.2, 0.7, 0.3, 1);
+  --dur-fast:         120ms;
+  --dur-base:         180ms;
+  --dur-slow:         280ms;
+
+  /* ─── Layout dimensions ─── */
+  --sidebar-width:    340px;
+  --leftbar-width:    300px;
+  --leftbar-rail:     44px;
+  --topbar-h:         40px;
+  --toolbar-h:        48px;
+
+  /* ─── Connection (SVG) ─── */
+  --wire-color:       #4f8edb;
+  --wire-color-hover: var(--accent-hover);
+
+  /* ─── Legacy aliases ─── */
+  --bg-color:         var(--surface-0);
+  --grid-color:       var(--grid-dot);
+  --node-bg:          var(--surface-2);
+  --node-border:      var(--border);
+  --text-color:       var(--text);
+  --accent-color:     var(--accent);
+}
+
+/* Toolbar inherits the vibrancy palette, but every value now points at
+   the global tokens so re-theming is a one-file change. */
+#toolbar {
+  --tb-bg:            var(--surface-overlay);
+  --tb-border:        var(--border-subtle);
+  --tb-border-strong: var(--border-strong);
+  --tb-text:          var(--text);
+  --tb-text-dim:      var(--text-secondary);
+  --tb-text-faint:    var(--text-muted);
+  --tb-chip:          rgba(120, 120, 128, 0.18);
+  --tb-chip-hover:    rgba(120, 120, 128, 0.28);
+  --tb-accent:        var(--accent);
+  --tb-accent-hover:  var(--accent-hover);
+  --tb-danger:        var(--danger);
+  --tb-radius:        var(--radius-lg);
+  --tb-radius-inner:  var(--radius-md);
+  --tb-h:             30px;
+}
+
+/* Respect reduced-motion preferences: kill long-running animations and
+   shorten transitions everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -15,7 +15,14 @@ service-account*.json
 # Generated media
 generated/
 
+# Local databases — contain hashed credentials and user content
+data/
+
 # Editor / OS
 .DS_Store
 .vscode/
 .idea/
+
+# Frontend build
+node_modules/
+static/dist/
