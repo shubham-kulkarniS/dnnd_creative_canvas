@@ -13,6 +13,8 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from ..auth.dependencies import get_current_user
+from ..auth.models import User
 from ..library_db import get_db
 from .schemas import AssetCreate, AssetOut, AssetUpdate
 from .service import AssetService
@@ -21,7 +23,11 @@ router = APIRouter(prefix="/api/assets", tags=["assets"])
 
 
 @router.post("", response_model=AssetOut, status_code=status.HTTP_201_CREATED)
-def create_asset(payload: AssetCreate, db: Session = Depends(get_db)) -> AssetOut:
+def create_asset(
+    payload: AssetCreate,
+    db: Session = Depends(get_db),
+    _current: User = Depends(get_current_user),
+) -> AssetOut:
     try:
         asset = AssetService(db).create(payload)
     except ValueError as e:
@@ -39,7 +45,12 @@ def list_assets(
 
 
 @router.patch("/{asset_id}", response_model=AssetOut)
-def update_asset(asset_id: str, payload: AssetUpdate, db: Session = Depends(get_db)) -> AssetOut:
+def update_asset(
+    asset_id: str,
+    payload: AssetUpdate,
+    db: Session = Depends(get_db),
+    _current: User = Depends(get_current_user),
+) -> AssetOut:
     asset = AssetService(db).update(asset_id, payload)
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="asset not found")
@@ -47,6 +58,10 @@ def update_asset(asset_id: str, payload: AssetUpdate, db: Session = Depends(get_
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_asset(asset_id: str, db: Session = Depends(get_db)) -> None:
+def delete_asset(
+    asset_id: str,
+    db: Session = Depends(get_db),
+    _current: User = Depends(get_current_user),
+) -> None:
     if not AssetService(db).delete(asset_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="asset not found")

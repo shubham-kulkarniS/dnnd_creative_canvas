@@ -127,7 +127,10 @@ export class NotesPanel {
                 this.editingId = null;
                 store.emit('note:updated', updated);    // triggers refresh
             } catch (err) {
-                this._status(`Save failed: ${err.message}`, 'err');
+                const msg = err.status === 401
+                    ? 'You must be logged in to update notes.'
+                    : `Save failed: ${err.message}`;
+                this._status(msg, 'err');
                 btn.disabled = false; btn.textContent = 'Save';
             }
             return;
@@ -140,7 +143,10 @@ export class NotesPanel {
                 await api.notes.remove(id);
                 store.emit('note:removed', { noteId: id, nodeId: note.node_id });
             } catch (err) {
-                this._status(`Delete failed: ${err.message}`, 'err');
+                const msg = err.status === 401
+                    ? 'You must be logged in to delete notes.'
+                    : `Delete failed: ${err.message}`;
+                this._status(msg, 'err');
             }
             return;
         }

@@ -85,9 +85,48 @@ export function previewHTML(node) {
         return `<img src="${esc(node.value)}" alt="${altLabel}" loading="lazy">`;
     }
     if (node.dataType === 'video') {
-        return `<video src="${esc(node.value)}" controls muted loop
+        const hasVariants = node._generatedAssets && node._generatedAssets.length > 1;
+        const activeIndex = node._activeAssetIndex ?? 0;
+        const totalVariants = node._generatedAssets?.length ?? 1;
+        
+        let variantUI = '';
+        if (hasVariants) {
+            // Prev/Next buttons
+            variantUI += `
+                <div class="preview-nav">
+                    <button type="button" class="preview-nav-btn" 
+                            data-variant-prev 
+                            title="Previous variant (←)"
+                            aria-label="Previous video variant">◄</button>
+                    <span class="preview-variant-info">${activeIndex + 1} / ${totalVariants}</span>
+                    <button type="button" class="preview-nav-btn" 
+                            data-variant-next 
+                            title="Next variant (→)"
+                            aria-label="Next video variant">►</button>
+                </div>
+            `;
+        }
+        
+        // Main video
+        variantUI += `<video src="${esc(node.value)}" controls muted loop
                        playsinline preload="metadata"
                        aria-label="${altLabel}"></video>`;
+        
+        // Seed rings (indicators for all variants)
+        if (hasVariants) {
+            const rings = node._generatedAssets
+                .map((_, i) => {
+                    const isActive = i === activeIndex ? ' active' : '';
+                    return `<button type="button" class="seed-ring${isActive}" 
+                                    data-variant-index="${i}"
+                                    title="Variant ${i + 1}"
+                                    aria-label="Variant ${i + 1} (${i === activeIndex ? 'current' : 'available'})"
+                                    ${i === activeIndex ? 'aria-current="true"' : ''}></button>`;
+                }).join('');
+            variantUI += `<div class="seed-rings">${rings}</div>`;
+        }
+        
+        return variantUI;
     }
     return '';
 }

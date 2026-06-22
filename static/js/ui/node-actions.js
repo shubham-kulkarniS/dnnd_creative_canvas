@@ -45,7 +45,10 @@ export async function saveAsset({ node, btn, api, store, refreshBody }) {
     } catch (e) {
         btn.disabled = false;
         if (labelEl) labelEl.textContent = original; else btn.textContent = original;
-        alertDialog(`Could not save asset: ${e.message}`, { kind: 'err' });
+        const msg = e.status === 401
+            ? 'You must be logged in to save assets.'
+            : `Could not save asset: ${e.message}`;
+        alertDialog(msg, { kind: 'err' });
     }
 }
 
@@ -106,8 +109,26 @@ export async function saveNote({ node, api, store, refreshBody, getEl }) {
             saveBtn.disabled = false;
             saveBtn.textContent = node._noteId ? 'Update' : 'Save note';
         }
-        alertDialog(`Could not save note: ${e.message}`, { kind: 'err' });
+        const msg = e.status === 401
+            ? 'You must be logged in to save notes.'
+            : `Could not save note: ${e.message}`;
+        alertDialog(msg, { kind: 'err' });
     }
+}
+
+/* ── Video variant switching ────────────────────────────────────── */
+
+/**
+ * Switch active video variant (for nodes with multiple generated videos).
+ * Updates node._activeAssetIndex and refreshes the preview.
+ */
+export function switchVideoVariant({ node, index, refreshBody }) {
+    if (!node._generatedAssets || index < 0 || index >= node._generatedAssets.length) return;
+    node._activeAssetIndex = index;
+    const asset = node._generatedAssets[index];
+    node.value = asset.url;
+    node._mime = asset.mime;
+    refreshBody(node);
 }
 
 /* ── Body repaint helper (single source of truth) ───────────────── */

@@ -196,7 +196,10 @@ export class AssetsPanel {
                 await api.assets.remove(asset.id);
                 store.emit('asset:removed', asset.id);
             } catch (err) {
-                this._status(`Delete failed: ${err.message}`, 'err');
+                const msg = err.status === 401
+                    ? 'You must be logged in to delete assets.'
+                    : `Delete failed: ${err.message}`;
+                this._status(msg, 'err');
             }
         });
 

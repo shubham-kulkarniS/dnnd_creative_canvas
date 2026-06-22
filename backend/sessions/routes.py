@@ -23,9 +23,9 @@ from .service import SessionAccessError, SessionService
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
-def _summary(sess, *, user_id: int | None) -> SessionSummary:
-    """Build the wire summary, stamping the owner/shared flags so the
-    UI can render the right chip without a second lookup."""
+def _summary(sess, *, user_id: int | None, shared_ids: frozenset[str] = frozenset()) -> SessionSummary:
+    """Build the wire summary. ``shared_ids`` must be the set of session ids
+    explicitly shared *with* ``user_id`` so the flag is accurate."""
     return SessionSummary(
         id=sess.id,
         name=sess.name,
@@ -34,11 +34,7 @@ def _summary(sess, *, user_id: int | None) -> SessionSummary:
         edge_count=sess.edge_count,
         owner_user_id=sess.owner_user_id,
         is_owner=(user_id is not None and sess.owner_user_id == user_id),
-        shared_with_me=(
-            user_id is not None
-            and sess.owner_user_id is not None
-            and sess.owner_user_id != user_id
-        ),
+        shared_with_me=(user_id is not None and sess.id in shared_ids),
         created_at=sess.created_at,
         updated_at=sess.updated_at,
     )
@@ -53,12 +49,15 @@ def list_sessions(
     if current is None:
         # Backwards-compat: anonymous mode returns legacy un-owned rows.
         items = [s for s in svc.list_all() if s.owner_user_id is None]
+        shared_ids: frozenset[str] = frozenset()
     elif current.is_admin:
         items = svc.list_all()
+        shared_ids = frozenset(svc.get_shared_session_ids(current.id))
     else:
         items = svc.list_for_user(current.id)
+        shared_ids = frozenset(svc.get_shared_session_ids(current.id))
     uid = current.id if current else None
-    return [_summary(s, user_id=uid) for s in items]
+    return [_summary(s, user_id=uid, shared_ids=shared_ids) for s in items]
 
 
 @router.post("", response_model=SessionDetail)
@@ -73,7 +72,9 @@ def save_session(
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    summary = _summary(sess, user_id=current.id if current else None)
+    uid = current.id if current else None
+    # A just-saved session is always owned by the saver — never shared_with_me.
+    summary = _summary(sess, user_id=uid, shared_ids=frozenset())
     return SessionDetail(**summary.model_dump(), graph=payload.graph)
 
 
@@ -92,7 +93,8 @@ def get_session(
     if not svc.can_read(sess, uid, is_admin=bool(current and current.is_admin)):
         # Don't leak existence to callers without permission.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="session not found")
-    summary = _summary(sess, user_id=uid)
+    shared_ids = frozenset(svc.get_shared_session_ids(uid)) if uid else frozenset()
+    summary = _summary(sess, user_id=uid, shared_ids=shared_ids)
     return SessionDetail(**summary.model_dump(), graph=graph)
 
 

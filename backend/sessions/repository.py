@@ -71,6 +71,12 @@ class SessionRepository:
         stmt = select(SessionShare).where(SessionShare.session_id == session_id)
         return list(self._db.execute(stmt).scalars().all())
 
+    def list_shared_session_ids_for_user(self, user_id: int) -> set[str]:
+        """Return the set of session ids explicitly shared *with* ``user_id``
+        (i.e. rows where they are the recipient, not the owner)."""
+        stmt = select(SessionShare.session_id).where(SessionShare.user_id == user_id)
+        return set(self._db.execute(stmt).scalars().all())
+
     def share_exists(self, session_id: str, user_id: int) -> bool:
         return self._db.get(SessionShare, (session_id, user_id)) is not None
 

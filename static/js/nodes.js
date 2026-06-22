@@ -20,6 +20,7 @@ import {
     openNote,
     cancelNote,
     saveNote,
+    switchVideoVariant,
     makeBodyRefresher,
 }                          from './ui/node-actions.js';
 
@@ -146,6 +147,29 @@ export class NodeRenderer {
             if (saveBtn && root.contains(saveBtn)) {
                 e.preventDefault();
                 saveAsset({ node, btn: saveBtn, api, store, refreshBody: this._refreshBody });
+                return;
+            }
+            // Delegated: Video variant navigation (prev/next/ring click).
+            const variantPrev = e.target.closest('[data-variant-prev]');
+            const variantNext = e.target.closest('[data-variant-next]');
+            const variantRing = e.target.closest('[data-variant-index]');
+            if (variantPrev && root.contains(variantPrev)) {
+                e.preventDefault();
+                const idx = (node._activeAssetIndex ?? 0) - 1;
+                if (idx >= 0) switchVideoVariant({ node, index: idx, refreshBody: this._refreshBody });
+                return;
+            }
+            if (variantNext && root.contains(variantNext)) {
+                e.preventDefault();
+                const total = node._generatedAssets?.length ?? 1;
+                const idx = (node._activeAssetIndex ?? 0) + 1;
+                if (idx < total) switchVideoVariant({ node, index: idx, refreshBody: this._refreshBody });
+                return;
+            }
+            if (variantRing && root.contains(variantRing)) {
+                e.preventDefault();
+                const idx = parseInt(variantRing.dataset.variantIndex, 10);
+                switchVideoVariant({ node, index: idx, refreshBody: this._refreshBody });
                 return;
             }
             // Delegated: Note editor lifecycle on data nodes.

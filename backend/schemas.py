@@ -93,7 +93,7 @@ class ImageResponse(BaseModel):
 
 
 class VideoResponse(BaseModel):
-    asset: MediaAsset
+    assets: list[MediaAsset]  # one entry per generated video
     model: str
     elapsed_ms: int
 

@@ -11,6 +11,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from ..auth.dependencies import get_current_user
+from ..auth.models import User
 from ..library_db import get_db
 from .schemas import NoteCreate, NoteOut, NoteUpdate
 from .service import NoteService
@@ -19,7 +21,11 @@ router = APIRouter(prefix="/api/notes", tags=["notes"])
 
 
 @router.post("", response_model=NoteOut, status_code=status.HTTP_201_CREATED)
-def create_note(payload: NoteCreate, db: Session = Depends(get_db)) -> NoteOut:
+def create_note(
+    payload: NoteCreate,
+    db: Session = Depends(get_db),
+    _current: User = Depends(get_current_user),
+) -> NoteOut:
     try:
         note = NoteService(db).create(payload)
     except ValueError as e:
@@ -37,7 +43,12 @@ def list_notes(
 
 
 @router.patch("/{note_id}", response_model=NoteOut)
-def update_note(note_id: str, payload: NoteUpdate, db: Session = Depends(get_db)) -> NoteOut:
+def update_note(
+    note_id: str,
+    payload: NoteUpdate,
+    db: Session = Depends(get_db),
+    _current: User = Depends(get_current_user),
+) -> NoteOut:
     try:
         note = NoteService(db).update(note_id, payload)
     except ValueError as e:
@@ -48,6 +59,10 @@ def update_note(note_id: str, payload: NoteUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_note(note_id: str, db: Session = Depends(get_db)) -> None:
+def delete_note(
+    note_id: str,
+    db: Session = Depends(get_db),
+    _current: User = Depends(get_current_user),
+) -> None:
     if not NoteService(db).delete(note_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="note not found")

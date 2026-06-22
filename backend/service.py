@@ -90,7 +90,7 @@ def run_generate_video(req: VideoGenerateRequest) -> VideoResponse:
     if req.mode == "image" and not req.image:
         raise ValueError("image is required when mode='image'")
     t0 = time.monotonic()
-    data, mime = veo.generate_video(
+    video_list = veo.generate_video(
         prompt=req.prompt,
         image_ref=req.image if req.mode == "image" else None,
         duration_seconds=req.duration_seconds,
@@ -105,9 +105,12 @@ def run_generate_video(req: VideoGenerateRequest) -> VideoResponse:
         person_generation=req.person_generation,
         compression_quality=req.compression_quality,
     )
-    url, _ = save_media(data, mime, prefix="gen_vid")
+    assets = []
+    for data, mime in video_list:
+        url, _ = save_media(data, mime, prefix="gen_vid")
+        assets.append(_asset(url, mime, data))
     return VideoResponse(
-        asset=_asset(url, mime, data),
+        assets=assets,
         model=get_settings().veo_video_model,
         elapsed_ms=int((time.monotonic() - t0) * 1000),
     )

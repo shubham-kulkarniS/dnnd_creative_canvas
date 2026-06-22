@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import random
 import time
-from typing import Tuple
+from typing import List, Tuple
 
 from ..config import get_settings
 from ..media import load_media
@@ -42,8 +42,9 @@ def generate_video(
     generate_audio: bool | None = None,
     person_generation: str | None = None,
     compression_quality: str | None = None,
-) -> Tuple[bytes, str]:
-    """Generate a video; returns ``(bytes, mime_type)``.
+) -> List[Tuple[bytes, str]]:
+    """Generate videos; returns ``[(bytes, mime_type), ...]`` — one tuple per
+    generated video (up to ``number_of_videos``).
 
     ``image_ref`` makes this image-to-video, otherwise text-to-video.
     Optional kwargs map directly onto Veo's ``GenerateVideosConfig``
@@ -86,8 +87,7 @@ def generate_video(
     operation = client.models.generate_videos(**kwargs)
     operation = _await_operation(client, operation)
 
-    video_bytes, mime_type = _download_first_video(client, operation)
-    return video_bytes, mime_type
+    return _download_all_videos(client, operation)
 
 
 # ── internal helpers ──────────────────────────────────────────────────
@@ -109,24 +109,18 @@ def _await_operation(client, operation):
     return operation
 
 
-def _download_first_video(client, operation) -> Tuple[bytes, str]:
-    response = getattr(operation, "response", None) or getattr(operation, "result", None)
-    generated = getattr(response, "generated_videos", None) if response else None
-    if not generated:
-        raise RuntimeError("Veo returned no videos")
-
-    video_obj = generated[0].video
-    # The SDK lazily downloads; some versions return bytes inline, others
-    # expose a `uri`. Handle both transparently.
+def _resolve_video_bytes(client, video_obj) -> Tuple[bytes, str]:
+    """Download a single video object → (bytes, mime). Handles the three
+    ways the SDK may surface the result: inline bytes, SDK download(), or
+    a raw URI fetch."""
     if getattr(video_obj, "video_bytes", None):
         return video_obj.video_bytes, "video/mp4"
 
     try:
-        # download() mutates the object, attaching .video_bytes
         client.files.download(file=video_obj)
         if getattr(video_obj, "video_bytes", None):
             return video_obj.video_bytes, "video/mp4"
-    except Exception:  # pragma: no cover — fall through to direct fetch
+    except Exception:  # pragma: no cover
         pass
 
     uri = getattr(video_obj, "uri", None)
@@ -138,3 +132,12 @@ def _download_first_video(client, operation) -> Tuple[bytes, str]:
             return r.content, r.headers.get("content-type", "video/mp4")
 
     raise RuntimeError("Veo response contained no downloadable video bytes")
+
+
+def _download_all_videos(client, operation) -> list[Tuple[bytes, str]]:
+    """Return (bytes, mime) for every video in the completed operation."""
+    response = getattr(operation, "response", None) or getattr(operation, "result", None)
+    generated = getattr(response, "generated_videos", None) if response else None
+    if not generated:
+        raise RuntimeError("Veo returned no videos")
+    return [_resolve_video_bytes(client, gv.video) for gv in generated]

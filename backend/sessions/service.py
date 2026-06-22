@@ -129,6 +129,11 @@ class SessionService:
     def list_shares(self, session_id: str) -> list[SessionShare]:
         return self._repo.list_shares(session_id)
 
+    def get_shared_session_ids(self, user_id: int) -> set[str]:
+        """Return the set of session ids that have been explicitly shared
+        *with* ``user_id`` (excluding sessions the user owns)."""
+        return self._repo.list_shared_session_ids_for_user(user_id)
+
     def share(self, session_id: str, *, owner_user_id: int, recipient_user_id: int) -> SessionShare | None:
         """Idempotent: returns the existing row if the share already
         exists, otherwise the new row. ``None`` if the session is gone."""
