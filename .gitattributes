@@ -1,0 +1,9 @@
+
+# secrets
+.env              filter=git-crypt diff=git-crypt
+.env.*            filter=git-crypt diff=git-crypt
+secrets/**        filter=git-crypt diff=git-crypt
+*.pem             filter=git-crypt diff=git-crypt
+
+# NEVER encrypt .gitattributes itself
+.gitattributes    !filter !diff
