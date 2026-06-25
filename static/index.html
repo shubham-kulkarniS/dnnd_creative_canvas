@@ -230,6 +230,30 @@
             </div>
         </div>
 
+        <div class="tb-group tb-group--embed" data-group="embed">
+            <span class="tb-group-label">Embed</span>
+            <button type="button" class="tb-group-add" data-group-add="embed"
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="tb-menu-embed"
+                    title="Embed a running web app (Gradio, etc.) in the canvas">
+                <svg class="tb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor"
+                          stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <div class="tb-menu" id="tb-menu-embed"
+                 data-group-menu="embed" role="menu" hidden>
+                <button type="button" role="menuitem" data-add="embed:gradio">
+                    <span class="tb-menu-name">Gradio app</span>
+                    <span class="tb-menu-hint">Paste an IP:port (e.g. 127.0.0.1:7860)</span>
+                </button>
+                <button type="button" role="menuitem" data-add="embed:generic">
+                    <span class="tb-menu-name">Generic URL</span>
+                    <span class="tb-menu-hint">Any http(s) page in an iframe</span>
+                </button>
+            </div>
+        </div>
+
         <span class="toolbar-divider"></span>
 
         <button type="button" id="run-pipeline-btn" class="tb-ghost tb-primary-ghost"

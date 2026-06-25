@@ -19,6 +19,9 @@ const SOURCE_LABEL = {
 
 /** Top-level dispatch. */
 export function nodeBodyHTML(node) {
+    if (node.type === 'embed') {
+        return embedView(node);
+    }
     if (node.type === 'generate' || node.type === 'modify') {
         return paramsHTML(node);
     }
@@ -184,4 +187,87 @@ export function noteHTML(node) {
                     title="${hasNote ? 'Edit director note' : 'Write a director note'}">
                 ${icon('note')}<span>${label}</span>
             </button>`;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ *  Embed node — iframe-wrapping a remote web app (e.g. a locally
+ *  running Gradio space). Pipeline-inert; the user drives it directly.
+ * ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Whitelist scheme + host shape so we never inject ``javascript:`` /
+ * ``data:`` / ``vbscript:`` etc. as an iframe ``src``. Returns the
+ * canonicalised URL string, or ``''`` if the input cannot be made into
+ * a safe absolute http(s) URL.
+ *
+ * Accepts shortcut forms commonly printed by Gradio at boot time:
+ *   - ``127.0.0.1:7860``          → ``http://127.0.0.1:7860``
+ *   - ``localhost:7860/foo``      → ``http://localhost:7860/foo``
+ *   - ``https://x.hf.space``      → unchanged
+ */
+export function sanitiseEmbedUrl(raw) {
+    const s = String(raw ?? '').trim();
+    if (!s) return '';
+    const withScheme = /^https?:\/\//i.test(s) ? s : `http://${s}`;
+    try {
+        const u = new URL(withScheme);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+        if (!u.host) return '';
+        return u.toString();
+    } catch {
+        return '';
+    }
+}
+
+/** Render the iframe body for an ``embed`` node. */
+export function embedView(node) {
+    const url    = sanitiseEmbedUrl(node.embedUrl);
+    const height = Math.max(160, Math.min(1200, parseInt(node.embedHeight, 10) || 480));
+
+    // Empty / invalid URL → placeholder with a nudge to the sidebar.
+    if (!url) {
+        return `
+            <div class="node-embed node-embed--empty"
+                 style="--embed-h: ${height}px;">
+                <div class="node-embed-placeholder">
+                    <strong>No URL set.</strong>
+                    <span>Open this node's settings and paste the Gradio
+                    app's address (e.g. <code>127.0.0.1:7860</code>).</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // ``sandbox`` keeps the embed isolated from the parent document
+    // (its scripts cannot reach our DOM, cookies, or storage), while
+    // ``allow-same-origin`` is required for Gradio's own SSE/fetch
+    // calls to its own origin to succeed. ``allow-forms`` /
+    // ``allow-popups`` cover the most common interactions inside the
+    // embedded app (file picker, "open in new tab" affordances, etc.).
+    //
+    // ``referrerpolicy="no-referrer"`` avoids leaking the parent URL
+    // to the embedded server.
+    const sandbox = 'allow-scripts allow-same-origin allow-forms ' +
+                    'allow-popups allow-popups-to-escape-sandbox ' +
+                    'allow-downloads';
+
+    return `
+        <div class="node-embed" style="--embed-h: ${height}px;">
+            <div class="node-embed-bar">
+                <span class="node-embed-url" title="${esc(url)}">${esc(url)}</span>
+                <a class="node-embed-open" href="${esc(url)}"
+                   target="_blank" rel="noopener noreferrer"
+                   title="Open in a new browser tab">↗</a>
+                <button type="button" class="node-embed-reload"
+                        data-embed-reload
+                        title="Reload the embedded app">⟳</button>
+            </div>
+            <iframe class="node-embed-frame"
+                    src="${esc(url)}"
+                    sandbox="${sandbox}"
+                    referrerpolicy="no-referrer"
+                    loading="lazy"
+                    title="${esc(node.title)}"></iframe>
+        </div>
+    `;
 }

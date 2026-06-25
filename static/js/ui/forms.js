@@ -123,9 +123,37 @@ export function formHTML(node) {
     } else if (node.type === 'modify') {
         groups.push(...modifyForm(node));
         groups.push(runForm());
+    } else if (node.type === 'embed') {
+        groups.push(...embedForm(node));
+        // Embed nodes have no slots, so skip the Connections panel.
+        return groups.join('');
     }
     groups.push(connectionsHTML(node));
     return groups.join('');
+}
+
+/* ── Embed ── */
+
+export function embedForm(node) {
+    const url = esc(node.embedUrl ?? '');
+    const h   = parseInt(node.embedHeight, 10) || 480;
+    return [
+        group('App URL',
+            `<input type="url" data-field="embedUrl"
+                    placeholder="127.0.0.1:7860 or https://…"
+                    value="${url}" autocomplete="off" spellcheck="false">`,
+            { hint: 'IP:port shortcut works — <code>http://</code> is filled in for you.' }),
+        group('Frame Height',
+            `<input type="number" data-field="embedHeight" min="160" max="1200"
+                    step="20" value="${h}">`,
+            { hint: 'Pixels. The iframe scrolls if the app needs more.' }),
+        `<div class="menu-group"><div class="hint">
+            The embedded app runs sandboxed: it can't read this canvas's
+            cookies, storage, or DOM. Copy any output URLs from inside
+            the app and paste them into a Data node to flow them
+            through the pipeline.
+        </div></div>`,
+    ];
 }
 
 /* ── Data node ── */

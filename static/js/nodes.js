@@ -180,6 +180,20 @@ export class NodeRenderer {
             if (e.target.closest('[data-note-save]'))   { e.preventDefault(); saveNote({ node, api, store, refreshBody, getEl }); return; }
             // Typing inside the textarea shouldn't bubble up to select.
             if (e.target.matches('[data-note-input]'))  { return; }
+            // Delegated: Embed-node reload button. Reload the iframe in
+            // place (assigning ``src`` to itself is the cheapest reload
+            // path without tearing down the element).
+            const reloadBtn = e.target.closest('[data-embed-reload]');
+            if (reloadBtn && root.contains(reloadBtn)) {
+                e.preventDefault();
+                const frame = root.querySelector('.node-embed-frame');
+                if (frame) frame.src = frame.src;
+                return;
+            }
+            // Clicks inside the embed iframe shell (link / reload) should
+            // not bubble into "select node" since the user is interacting
+            // with the embedded app, not the canvas chrome.
+            if (e.target.closest('.node-embed-bar a')) return;
             this.onSelect(node.id);
         });
 
@@ -314,6 +328,29 @@ export class NodeRenderer {
             // slot has moved with the new width.
             this._applySize(node, el);
             this.onDragMove?.(node.id);
+            return;
+        }
+        // ── Embed nodes ──────────────────────────────────────────
+        // The iframe lives inside .node-body, and any innerHTML rewrite
+        // tears it down (losing whatever state the user has built up
+        // inside the remote app). So we patch surgically:
+        //   - embedHeight  → adjust the CSS variable, keep the iframe.
+        //   - embedUrl     → only re-render when the URL actually
+        //                    changed and is non-empty; that's an
+        //                    intentional "load a different app" action.
+        if (node.type === 'embed') {
+            if (key === 'embedHeight') {
+                const wrap = el.querySelector('.node-embed');
+                if (wrap) {
+                    const h = Math.max(160, Math.min(1200,
+                        parseInt(node.embedHeight, 10) || 480));
+                    wrap.style.setProperty('--embed-h', `${h}px`);
+                }
+                return;
+            }
+            if (key === 'embedUrl') {
+                el.querySelector('.node-body').innerHTML = nodeBodyHTML(node);
+            }
             return;
         }
         // A new value/dataType makes any prior saved-asset stale: clear the marker

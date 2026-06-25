@@ -87,6 +87,23 @@ const TEMPLATES = {
             system_instruction: '',
         },
     }),
+    /*
+     * Embed: render a remote web app (typically a locally-running
+     * Gradio Space) as an iframe inside the node body. Pipeline-inert
+     * (no inputs/outputs), driven entirely by the user.
+     */
+    embed: (variant = 'gradio') => ({
+        type: 'embed',
+        title: variant === 'gradio' ? 'Gradio · embed' : 'Embed',
+        embedKind: variant,                         // 'gradio' | 'generic'
+        embedUrl: variant === 'gradio'
+            ? 'http://localhost:7860'
+            : 'https://',
+        embedHeight: 480,                           // px, body iframe height
+        width: 520,                                 // wider default than data nodes
+        inputs: [],
+        outputs: [],
+    }),
 };
 
 /**
@@ -118,6 +135,10 @@ const GROUP_ACTIONS = {
         data:     { kind: 'data',     variant: 'video' },
         generate: { kind: 'generate', variant: 'video' },
         modify:   { kind: 'modify',   variant: 'video' },
+    },
+    embed: {
+        gradio:   { kind: 'embed',    variant: 'gradio'  },
+        generic:  { kind: 'embed',    variant: 'generic' },
     },
 };
 
@@ -241,6 +262,11 @@ export class Toolbar {
         }
         if (kind === 'modify') {
             return { type: 'param', name: 'operation' };
+        }
+        if (kind === 'embed') {
+            // Nudge the user toward the URL field so they can point
+            // the iframe at their running Gradio app immediately.
+            return { type: 'field', name: 'embedUrl' };
         }
         return null;
     }
