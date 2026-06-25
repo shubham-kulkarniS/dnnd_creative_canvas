@@ -2532,3 +2532,190 @@ html.auth-locked #canvas-container {
     0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); }
     50%      { box-shadow: 0 0 0 6px transparent; }
 }
+
+/* ───── Leftbar: Gradio servers panel ─────
+   List of registered Gradio endpoints with a live/dead status dot,
+   inline edit form, and add-server affordance. Reuses the existing
+   ``.lb-btn`` / ``.lb-status`` / ``.lb-section-title`` primitives so
+   it visually rhymes with the Sessions / Assets / Notes panels. */
+.gp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+.gp-head .lb-section-title { margin: 0; }
+
+.gp-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-3) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.gp-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    transition: border-color var(--dur-fast) var(--ease-out);
+}
+.gp-card:hover                 { border-color: var(--border-strong); }
+.gp-card.gp-card--edit         { border-color: var(--accent-soft); }
+
+.gp-card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+.gp-card-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gp-card-actions {
+    display: inline-flex;
+    gap: var(--space-1);
+    flex-shrink: 0;
+}
+
+/* Liveness dot — same colour family as ``.api-status`` so users
+   recognise the green/red/grey vocabulary. */
+.gp-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex-shrink: 0;
+    transition: background var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+}
+.gp-dot--ok       { background: var(--success); box-shadow: 0 0 6px var(--success-strong); }
+.gp-dot--err      { background: var(--danger);  box-shadow: 0 0 6px var(--danger-strong); }
+.gp-dot--checking {
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent-soft);
+    animation: gp-dot-pulse 1.2s ease-in-out infinite;
+}
+.gp-dot--unknown  { background: var(--text-faint); }
+
+@keyframes gp-dot-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); }
+    50%      { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* Metadata definition-list inside each card. */
+.gp-card-meta {
+    margin: var(--space-2) 0 0;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px var(--space-3);
+    font-size: var(--text-xs);
+}
+.gp-card-meta dt {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    font-weight: var(--weight-medium);
+}
+.gp-card-meta dd {
+    margin: 0;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gp-card-meta dd code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text);
+    background: var(--surface-3);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+}
+
+/* Inline edit / add form. */
+.gp-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2) var(--space-3);
+    margin-top: var(--space-3);
+}
+.gp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.gp-field--full { grid-column: 1 / -1; }
+
+.gp-field > span {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--text-muted);
+}
+
+.gp-field input,
+.gp-field select,
+.gp-field textarea {
+    width: 100%;
+    padding: var(--space-2);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    transition: border-color var(--dur-fast) var(--ease-out);
+}
+.gp-field textarea {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    resize: vertical;
+    min-height: 80px;
+}
+.gp-field input:focus-visible,
+.gp-field select:focus-visible,
+.gp-field textarea:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.gp-field input[readonly] {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.gp-hint {
+    font-style: normal;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: var(--leading-normal);
+}
+.gp-hint code {
+    font-family: var(--font-mono);
+    background: var(--surface-3);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+}
+
+.gp-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+}

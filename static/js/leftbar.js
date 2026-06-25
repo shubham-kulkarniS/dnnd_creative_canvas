@@ -1,8 +1,8 @@
 /**
  * Leftbar — collapsible left toolbar with tabs (User, Sessions, Assets,
- * Notes, Admin).
+ * Notes, Servers, Admin).
  *
- * Hosts five panels delegated to dedicated modules. The Admin tab is
+ * Hosts six panels delegated to dedicated modules. The Admin tab is
  * hidden for non-admins; we still bind it so promotion takes effect
  * without a reload. Persists the open tab and collapse state in
  * localStorage so the UI feels stable across reloads.
@@ -13,6 +13,7 @@ import { AssetsPanel }   from './assets_panel.js';
 import { NotesPanel }    from './notes_panel.js';
 import { UserPanel }     from './user_panel.js';
 import { AdminPanel }    from './admin_panel.js';
+import { GradioPanel }   from './gradio_panel.js';
 import { auth }          from './auth.js';
 import { store }         from './state.js';
 
@@ -28,6 +29,7 @@ export class Leftbar {
             sessions: root.querySelector('[data-lb-panel="sessions"]'),
             assets:   root.querySelector('[data-lb-panel="assets"]'),
             notes:    root.querySelector('[data-lb-panel="notes"]'),
+            servers:  root.querySelector('[data-lb-panel="servers"]'),
             admin:    root.querySelector('[data-lb-panel="admin"]'),
         };
         this.collapseBtn = root.querySelector('#lb-collapse');
@@ -109,6 +111,7 @@ export class Leftbar {
         if (tab === 'sessions') return new SessionsPanel(container);
         if (tab === 'assets')   return new AssetsPanel(container);
         if (tab === 'notes')    return new NotesPanel(container);
+        if (tab === 'servers')  return new GradioPanel(container);
         if (tab === 'admin')    return new AdminPanel(container);
         return null;
     }

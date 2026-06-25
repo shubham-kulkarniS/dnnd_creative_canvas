@@ -44,6 +44,8 @@
                  role="tabpanel" data-lb-panel="assets" hidden></div>
             <div class="lb-panel" id="lb-panel-notes"
                  role="tabpanel" data-lb-panel="notes" hidden></div>
+            <div class="lb-panel" id="lb-panel-servers"
+                 role="tabpanel" data-lb-panel="servers" hidden></div>
             <div class="lb-panel" id="lb-panel-admin"
                  role="tabpanel" data-lb-panel="admin" hidden></div>
         </section>
@@ -99,6 +101,19 @@
                           stroke-linecap="round"/>
                 </svg>
                 <span class="lb-tab-label">Notes</span>
+            </button>
+            <button type="button" class="lb-tab" role="tab"
+                    data-lb-tab="servers" aria-controls="lb-panel-servers"
+                    title="Gradio servers">
+                <svg class="lb-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="2.5" y="3"  width="11" height="4" rx="1"
+                          fill="none" stroke="currentColor" stroke-width="1.4"/>
+                    <rect x="2.5" y="9"  width="11" height="4" rx="1"
+                          fill="none" stroke="currentColor" stroke-width="1.4"/>
+                    <circle cx="4.5" cy="5"  r="0.7" fill="currentColor"/>
+                    <circle cx="4.5" cy="11" r="0.7" fill="currentColor"/>
+                </svg>
+                <span class="lb-tab-label">Servers</span>
             </button>
             <!-- Admin tab: hidden by Leftbar at runtime for non-admins. -->
             <button type="button" class="lb-tab lb-tab--admin" role="tab"
